@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700;900&family=Barlow+Condensed:wght@600;700;900&display=swap');
+
+:root {
+  --kw-red: #CC0000;
+  --kw-dark-red: #990000;
+  --kw-black: #1a1a1a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  font-family: 'Barlow', sans-serif;
+  background: #f4f4f2;
+  color: var(--kw-black);
+}
+
+.font-condensed {
+  font-family: 'Barlow Condensed', sans-serif;
+}
+
+/* KW red button */
+.btn-kw {
+  background: var(--kw-red);
+  color: white;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  transition: background 0.15s;
+}
+.btn-kw:hover { background: var(--kw-dark-red); }
+
+/* Resource card hover */
+.resource-card {
+  transition: transform 0.15s, box-shadow 0.15s, border-color 0.15s;
+}
+.resource-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0,0,0,0.10);
+  border-color: var(--kw-red);
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: #f4f4f2; }
+::-webkit-scrollbar-thumb { background: #ccc; border-radius: 3px; }
