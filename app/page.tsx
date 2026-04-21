@@ -1,7 +1,6 @@
 'use client'
 import { useEffect, useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 
 type Category = { id: string; name: string; sort_order: number }
@@ -11,7 +10,6 @@ type Event = { id: string; title: string; description: string; event_date: strin
 type Partner = { id: string; name: string; description: string; category: string; phone: string; website_url: string }
 
 export default function Dashboard() {
-  const [user, setUser] = useState<{ email?: string; id: string } | null>(null)
   const [isAdmin, setIsAdmin] = useState(false)
   const [categories, setCategories] = useState<Category[]>([])
   const [resources, setResources] = useState<Resource[]>([])
@@ -21,7 +19,6 @@ export default function Dashboard() {
   const [search, setSearch] = useState('')
   const [activeCategory, setActiveCategory] = useState('all')
   const [loading, setLoading] = useState(true)
-  const router = useRouter()
   const supabase = createClient()
 
   const loadData = useCallback(async () => {
@@ -37,25 +34,20 @@ export default function Dashboard() {
     if (ann.data) setAnnouncements(ann.data)
     if (evts.data) setEvents(evts.data)
     if (parts.data) setPartners(parts.data)
+    setLoading(false)
   }, [supabase])
 
   useEffect(() => {
     async function init() {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (!user) { router.push('/auth'); return }
-      setUser(user)
-      const { data: role } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single()
-      if (role?.role === 'admin') setIsAdmin(true)
       await loadData()
-      setLoading(false)
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: role } = await supabase.from('user_roles').select('role').eq('user_id', user.id).single()
+        if (role?.role === 'admin') setIsAdmin(true)
+      }
     }
     init()
-  }, [router, supabase, loadData])
-
-  async function signOut() {
-    await supabase.auth.signOut()
-    router.push('/auth')
-  }
+  }, [supabase, loadData])
 
   const filteredResources = resources.filter(r => {
     const matchCat = activeCategory === 'all' || r.category_id === activeCategory
@@ -82,15 +74,12 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-[#f4f4f2]">
-
-      {/* Announcements banner */}
       {announcements.length > 0 && (
         <div className="bg-kw-red text-white text-center py-2.5 px-4 text-sm font-medium leading-snug">
           <span className="font-semibold">BROKER BULLETIN:</span> {announcements[0].message}
         </div>
       )}
 
-      {/* Header */}
       <header className="bg-kw-black py-5 px-6">
         <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-4">
@@ -100,28 +89,25 @@ export default function Dashboard() {
               <p className="text-gray-400 font-condensed text-xs tracking-widest">ARIZONA LIVING REALTY</p>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <span className="text-gray-400 text-sm hidden sm:block">{user?.email}</span>
-            {isAdmin && (
-              <Link href="/admin" className="btn-kw text-xs px-4 py-2 rounded-lg font-semibold tracking-wide">
-                Admin Panel
-              </Link>
-            )}
-            <button onClick={signOut} className="text-gray-400 hover:text-white text-sm transition-colors">
-              Sign out
-            </button>
-          </div>
+          {isAdmin && (
+            <Link href="/admin" className="btn-kw text-xs px-4 py-2 rounded-lg font-semibold tracking-wide">
+              Admin Panel
+            </Link>
+          )}
+          {!isAdmin && (
+            <Link href="/auth" className="text-gray-400 hover:text-white text-xs transition-colors">
+              Admin login
+            </Link>
+          )}
         </div>
       </header>
 
-      {/* Dashboard title */}
       <div className="bg-kw-black pb-8 px-6">
         <div className="max-w-6xl mx-auto">
           <h1 className="font-condensed text-4xl font-black text-white tracking-wide">Agent Dashboard</h1>
         </div>
       </div>
 
-      {/* Events bar */}
       {events.length > 0 && (
         <div className="bg-yellow-500 px-6 py-3">
           <div className="max-w-6xl mx-auto flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -131,9 +117,7 @@ export default function Dashboard() {
                 <span className="font-semibold">{ev.title}</span>
                 <span>—</span>
                 <span>{formatDate(ev.event_date)}{ev.event_time && `, ${ev.event_time}`}{ev.location && ` @ ${ev.location}`}</span>
-                {ev.rsvp_url && (
-                  <a href={ev.rsvp_url} target="_blank" rel="noopener noreferrer" className="underline font-semibold ml-1">RSVP</a>
-                )}
+                {ev.rsvp_url && <a href={ev.rsvp_url} target="_blank" rel="noopener noreferrer" className="underline font-semibold ml-1">RSVP</a>}
               </div>
             ))}
           </div>
@@ -141,8 +125,6 @@ export default function Dashboard() {
       )}
 
       <main className="max-w-6xl mx-auto px-6 py-8 space-y-10">
-
-        {/* Search + filters */}
         <div className="space-y-4">
           <div className="relative">
             <svg className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
@@ -155,41 +137,25 @@ export default function Dashboard() {
             />
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setActiveCategory('all')}
-              className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeCategory === 'all' ? 'bg-kw-red text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-kw-red'}`}
-            >All</button>
+            <button onClick={() => setActiveCategory('all')} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeCategory === 'all' ? 'bg-kw-red text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-kw-red'}`}>All</button>
             {categories.map(cat => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeCategory === cat.id ? 'bg-kw-red text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-kw-red'}`}
-              >{cat.name}</button>
+              <button key={cat.id} onClick={() => setActiveCategory(cat.id)} className={`px-4 py-1.5 rounded-full text-sm font-semibold transition-colors ${activeCategory === cat.id ? 'bg-kw-red text-white' : 'bg-white text-gray-600 border border-gray-200 hover:border-kw-red'}`}>{cat.name}</button>
             ))}
           </div>
         </div>
 
-        {/* Resource grid by category */}
         {resourcesByCategory.length === 0 ? (
           <div className="text-center py-16 text-gray-400">
-            <p className="text-lg">No resources match your search.</p>
+            <p className="text-lg">{resources.length === 0 ? 'No resources added yet. Sign in as admin to add content.' : 'No resources match your search.'}</p>
           </div>
         ) : (
           resourcesByCategory.map(cat => (
             <section key={cat.id}>
-              <h2 className="font-condensed text-xl font-bold text-kw-black tracking-wide uppercase mb-4 border-b-2 border-kw-red pb-2 inline-block">
-                {cat.name}
-              </h2>
+              <h2 className="font-condensed text-xl font-bold text-kw-black tracking-wide uppercase mb-4 border-b-2 border-kw-red pb-2 inline-block">{cat.name}</h2>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                 {cat.items.map(r => (
                   r.url ? (
-                    <a
-                      key={r.id}
-                      href={r.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="resource-card bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-1 cursor-pointer"
-                    >
+                    <a key={r.id} href={r.url} target="_blank" rel="noopener noreferrer" className="resource-card bg-white border border-gray-200 rounded-xl p-4 flex flex-col gap-1 cursor-pointer">
                       <span className="font-semibold text-sm text-kw-black leading-tight">{r.name}</span>
                       {r.description && <span className="text-xs text-gray-500 leading-snug">{r.description}</span>}
                       {r.is_featured && <span className="mt-1 self-start text-xs bg-red-50 text-kw-red font-semibold px-2 py-0.5 rounded-full">Featured</span>}
@@ -206,12 +172,9 @@ export default function Dashboard() {
           ))
         )}
 
-        {/* Preferred Partners */}
         {partners.length > 0 && (
           <section>
-            <h2 className="font-condensed text-xl font-bold text-kw-black tracking-wide uppercase mb-4 border-b-2 border-kw-red pb-2 inline-block">
-              Preferred Partners
-            </h2>
+            <h2 className="font-condensed text-xl font-bold text-kw-black tracking-wide uppercase mb-4 border-b-2 border-kw-red pb-2 inline-block">Preferred Partners</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
               {partners.map(p => (
                 <div key={p.id} className="bg-white border-2 border-kw-red rounded-xl p-5 flex flex-col gap-2">
